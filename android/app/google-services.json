@@ -1,0 +1,49 @@
+{
+  "project_info": {
+    "project_number": "588314232678",
+    "firebase_url": "https://pagosdiarios-de9c6-default-rtdb.firebaseio.com",
+    "project_id": "pagosdiarios-de9c6",
+    "storage_bucket": "pagosdiarios-de9c6.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:588314232678:android:6b0b91f515e5f86969eaa7",
+        "android_client_info": {
+          "package_name": "com.example.pagadiario"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCNe-AivF72Df5HKP0lnJ2BK6TxIa--qxA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:588314232678:android:d4ddcd996a25397369eaa7",
+        "android_client_info": {
+          "package_name": "com.example.pagosdiarios"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCNe-AivF72Df5HKP0lnJ2BK6TxIa--qxA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
