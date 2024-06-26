@@ -8,17 +8,54 @@ class PruebasPrestamosPage extends StatefulWidget {
 }
 
 class _PruebasPrestamosPageState extends State<PruebasPrestamosPage> {
+  int _selectedFilter =
+      1; // 1: Todos los préstamos, 2: Préstamos del día actual
+  late DateTime _selectedDate = DateTime.now();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text('Lista de Préstamos'),
+        backgroundColor: Colors.blue,
+        actions: [
+          DropdownButton<int>(
+            value: _selectedFilter,
+            onChanged: (value) {
+              setState(() {
+                _selectedFilter = value!;
+              });
+            },
+            items: [
+              DropdownMenuItem(
+                value: 1,
+                child: Text('Todos los préstamos'),
+              ),
+              DropdownMenuItem(
+                value: 2,
+                child: Text('Préstamos de Hoy'),
+              ),
+            ],
+          ),
+          if (_selectedFilter == 2)
+            IconButton(
+              icon: Icon(Icons.calendar_today),
+              onPressed: () {
+                _selectDate(context);
+              },
+            ),
+        ],
       ),
       body: StreamBuilder(
-        stream: FirebaseFirestore.instance.collection('Prestamos').snapshots(),
+        stream: _selectedFilter == 1
+            ? FirebaseFirestore.instance.collection('Prestamos').snapshots()
+            : FirebaseFirestore.instance
+                .collection('Prestamos')
+                .where('DiaSemana', isEqualTo: _selectedDate.weekday)
+                .snapshots(),
         builder: (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
+            return Center(
               child: CircularProgressIndicator(),
             );
           }
@@ -26,7 +63,10 @@ class _PruebasPrestamosPageState extends State<PruebasPrestamosPage> {
               !snapshot.hasData ||
               snapshot.data!.docs.isEmpty) {
             return Center(
-              child: Text('No hay préstamos disponibles'),
+              child: Text(
+                'No hay préstamos disponibles',
+                style: TextStyle(fontSize: 18, color: Colors.red),
+              ),
             );
           }
           return ListView.builder(
@@ -54,50 +94,101 @@ class _PruebasPrestamosPageState extends State<PruebasPrestamosPage> {
     double deuda = data['Deuda'] != null ? data['Deuda'].toDouble() : 0;
     double valorPrestamo = data['ValorPrestamo'].toDouble();
 
+    int? diaSemana = data['DiaSemana'] as int?;
+    String diaSemanaTexto = _getDiaSemanaText(diaSemana);
+
     return Card(
-      child: ListTile(
-        title: Text('Cédula Cliente: ${data['CedulaCliente']}'),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Fecha: ${DateFormat('dd/MM/yyyy').format(fecha)}'),
-            Text('Forma de Pago: $formaPago'),
-            Text('Valor Intereses: ${valorIntereses.toStringAsFixed(0)}'),
-            Text('Valor Préstamo: ${valorPrestamo.toStringAsFixed(0)}'),
-            if (deuda > 0) Text('Deuda: ${deuda.toStringAsFixed(0)}'),
-            const SizedBox(height: 8),
-            const Text('Pagos realizados:'),
-            if (pagos.isNotEmpty)
-              ...pagos.asMap().entries.map(
-                (entry) {
-                  final numeroCuota = entry.key + 1;
-                  final pago = entry.value;
-                  return Text('Cuota $numeroCuota: ${pago.toStringAsFixed(0)}');
+      elevation: 5,
+      margin: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ListTile(
+            title: Text(
+              'Cédula Cliente: ${data['CedulaCliente']}',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(height: 8),
+                Text(
+                  'Fecha: ${DateFormat('dd/MM/yyyy').format(fecha)}',
+                  style: TextStyle(fontStyle: FontStyle.italic),
+                ),
+                Text('Forma de Pago: $formaPago'),
+                Text('Valor Intereses: ${valorIntereses.toStringAsFixed(0)}'),
+                Text('Valor Préstamo: ${valorPrestamo.toStringAsFixed(0)}'),
+                if (deuda > 0) Text('Deuda: ${deuda.toStringAsFixed(0)}'),
+                const SizedBox(height: 8),
+                const Text('Pagos realizados:',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                if (pagos.isNotEmpty)
+                  ...pagos.asMap().entries.map(
+                    (entry) {
+                      final numeroCuota = entry.key + 1;
+                      final pago = entry.value;
+                      return Text(
+                          'Cuota $numeroCuota: ${pago.toStringAsFixed(0)}');
+                    },
+                  ),
+                if (diaSemana != null)
+                  Text('Día de la semana: $diaSemanaTexto'),
+              ],
+            ),
+          ),
+          SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              ElevatedButton(
+                onPressed: () {
+                  _mostrarDialogoIngresarCuotas(context, prestamoId, formaPago,
+                      valorIntereses, pagos, deuda);
                 },
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+                child: const Text('Ingresar Cuotas',
+                    style: TextStyle(fontSize: 12)),
               ),
-          ],
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ElevatedButton(
-              onPressed: () {
-                _mostrarDialogoIngresarCuotas(context, prestamoId, formaPago,
-                    valorIntereses, pagos, deuda);
-              },
-              child: const Text('Ingresar Cuotas'),
-            ),
-            const SizedBox(width: 8),
-            ElevatedButton(
-              onPressed: () {
-                _mostrarDialogoAbonos(context, prestamoId, valorPrestamo);
-              },
-              child: const Text('Abonos'),
-            ),
-          ],
-        ),
+              const SizedBox(width: 8),
+              ElevatedButton(
+                onPressed: () {
+                  _mostrarDialogoAbonos(context, prestamoId, valorPrestamo);
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                child: const Text('Abonos', style: TextStyle(fontSize: 12)),
+              ),
+              const SizedBox(width: 16),
+            ],
+          ),
+        ],
       ),
     );
+  }
+
+  String _getDiaSemanaText(int? diaSemana) {
+    if (diaSemana != null) {
+      switch (diaSemana) {
+        case 1:
+          return 'Lunes';
+        case 2:
+          return 'Martes';
+        case 3:
+          return 'Miércoles';
+        case 4:
+          return 'Jueves';
+        case 5:
+          return 'Viernes';
+        case 6:
+          return 'Sábado';
+        case 7:
+          return 'Domingo';
+        default:
+          return 'Desconocido';
+      }
+    } else {
+      return 'Desconocido';
+    }
   }
 
   void _mostrarDialogoAbonos(
@@ -166,7 +257,7 @@ class _PruebasPrestamosPageState extends State<PruebasPrestamosPage> {
           content: SingleChildScrollView(
             child: Column(
               children: [
-                Text('Cuota: ${valorCuota.toStringAsFixed(2)}'),
+                Text('Cuota: ${valorCuota.toStringAsFixed(0)}'),
                 TextField(
                   controller: pagoController,
                   keyboardType: TextInputType.number,
@@ -245,10 +336,24 @@ class _PruebasPrestamosPageState extends State<PruebasPrestamosPage> {
         return 0;
     }
   }
-}
 
-void main() {
-  runApp(MaterialApp(
-    home: PruebasPrestamosPage(),
-  ));
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2101),
+    );
+    if (picked != null && picked != _selectedDate) {
+      setState(() {
+        _selectedDate = picked;
+      });
+    }
+  }
+
+  void main() {
+    runApp(MaterialApp(
+      home: PruebasPrestamosPage(),
+    ));
+  }
 }

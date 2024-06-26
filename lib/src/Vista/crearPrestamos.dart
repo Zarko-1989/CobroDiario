@@ -59,13 +59,17 @@ class _CrearPrestamosScreenState extends State<CrearPrestamosScreen> {
       // Generar un ID único para el préstamo
       String prestamoId = firebase.collection('Prestamos').doc().id;
 
-      // Registrar el préstamo en Firestore con el ID generado
+      // Obtener el día de la semana actual (Lunes: 1, Martes: 2, ..., Domingo: 7)
+      int diaSemana = DateTime.now().weekday;
+
+      // Registrar el préstamo en Firestore con el ID generado y el día de la semana
       await firebase.collection('Prestamos').doc(prestamoId).set({
         "CedulaCliente":
             int.parse(cedulaController.text), // Convertir a numérico
         "ValorPrestamo": valorPrestamo, // Convertir a numérico
         "ValorIntereses": valorIntereses, // Valor de los intereses
         "FormaPago": formaPago,
+        "DiaSemana": diaSemana, // Guardar el día de la semana
         "Fecha": DateTime.now(),
       });
 
@@ -119,11 +123,12 @@ class _CrearPrestamosScreenState extends State<CrearPrestamosScreen> {
               ),
             TextField(
               controller: valorController,
-              decoration: InputDecoration(labelText: 'Valor del Préstamo'),
-              keyboardType: TextInputType.numberWithOptions(
+              decoration:
+                  const InputDecoration(labelText: 'Valor del Préstamo'),
+              keyboardType: const TextInputType.numberWithOptions(
                   decimal: true), // Tipo numérico para el valor del préstamo
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             Text('Forma de Pago:'),
             DropdownButton<String>(
               value: formaPago,
@@ -140,10 +145,10 @@ class _CrearPrestamosScreenState extends State<CrearPrestamosScreen> {
                 );
               }).toList(),
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             ElevatedButton(
               onPressed: registroPrestamo,
-              child: Text('Registrar Préstamo'),
+              child: const Text('Registrar Préstamo'),
             ),
           ],
         ),

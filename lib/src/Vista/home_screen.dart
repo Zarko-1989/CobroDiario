@@ -4,6 +4,7 @@ import 'package:pagosdiarios/src/Vista/GestionarUser.dart';
 import 'package:pagosdiarios/src/Vista/crearcliente.dart';
 import 'package:pagosdiarios/src/Vista/crearPrestamos.dart';
 import 'package:pagosdiarios/src/Vista/lista_prestamos2.dart';
+import 'package:pagosdiarios/src/Vista/reporteGastos.dart';
 
 class HomeScreen extends StatefulWidget {
   final String userId;
@@ -16,11 +17,13 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late Future<bool> isAdmin;
+  late Future<String> userName;
 
   @override
   void initState() {
     super.initState();
     isAdmin = _checkAdminRole();
+    userName = _getUserName();
   }
 
   Future<bool> _checkAdminRole() async {
@@ -30,7 +33,8 @@ class _HomeScreenState extends State<HomeScreen> {
           .doc(widget.userId)
           .get();
 
-      if (userDoc.exists && userDoc.get('Rol') == 'admin') {
+      var data = userDoc.data() as Map<String, dynamic>?;
+      if (data != null && data.containsKey('Rol') && data['Rol'] == 'admin') {
         return true;
       }
     } catch (e) {
@@ -39,16 +43,80 @@ class _HomeScreenState extends State<HomeScreen> {
     return false;
   }
 
-  Widget buildIconButton(IconData icon, double size, Widget destination) {
-    return IconButton(
-      iconSize: size,
-      icon: Icon(icon),
-      onPressed: () {
+  Future<String> _getUserName() async {
+    try {
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance
+          .collection('Users')
+          .doc(widget.userId)
+          .get();
+
+      var data = userDoc.data() as Map<String, dynamic>?;
+      if (data != null && data.containsKey('Nombre')) {
+        return data['Nombre'];
+      }
+    } catch (e) {
+      print("Error fetching user name: $e");
+    }
+    return 'Usuario';
+  }
+
+  Widget buildIconButton(IconData icon, String label, Widget destination) {
+    return GestureDetector(
+      onTap: () {
         Navigator.push(
           context,
           MaterialPageRoute(builder: (context) => destination),
         );
       },
+      child: Card(
+        elevation: 4,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Container(
+          width: 120,
+          height: 120,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 48),
+              SizedBox(height: 8),
+              Text(label, textAlign: TextAlign.center),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget buildIconButtonWithUserId(
+      IconData icon, String label, Widget Function(String) destinationBuilder) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+              builder: (context) => destinationBuilder(widget.userId)),
+        );
+      },
+      child: Card(
+        elevation: 4,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Container(
+          width: 120,
+          height: 120,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 48),
+              SizedBox(height: 8),
+              Text(label, textAlign: TextAlign.center),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -56,7 +124,18 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Home Screen'),
+        title: FutureBuilder<String>(
+          future: userName,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Text('Home Screen');
+            } else if (snapshot.hasData) {
+              return Text('Bienvenido, ${snapshot.data}');
+            } else {
+              return Text('Home Screen');
+            }
+          },
+        ),
         actions: [
           FutureBuilder<bool>(
             future: isAdmin,
@@ -64,8 +143,15 @@ class _HomeScreenState extends State<HomeScreen> {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return Center(child: CircularProgressIndicator());
               } else if (snapshot.hasData && snapshot.data == true) {
-                return buildIconButton(
-                    Icons.admin_panel_settings, 36, GestionUsers());
+                return IconButton(
+                  icon: Icon(Icons.admin_panel_settings),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => GestionUsers()),
+                    );
+                  },
+                );
               } else {
                 return SizedBox.shrink(); // No mostrar nada si no es admin
               }
@@ -74,17 +160,30 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: GridView.count(
+          crossAxisCount: 2,
+          padding: EdgeInsets.all(16.0),
+          crossAxisSpacing: 16.0,
+          mainAxisSpacing: 16.0,
           children: [
-            buildIconButton(Icons.person_add, 72, CrearCliente()),
-            // buildIconButton(Icons.list, 72, PruebasPrestamosPage2()),
-            buildIconButton(Icons.monetization_on, 72, CrearPrestamosScreen()),
-            buildIconButton(Icons.list_alt_rounded, 72, PruebasPrestamosPage()),
-            // Agregar otros iconos si es necesario
+            buildIconButton(Icons.person_add, 'Crear Cliente', CrearCliente()),
+            buildIconButton(Icons.monetization_on, 'Crear Préstamo',
+                CrearPrestamosScreen()),
+            buildIconButton(Icons.list_alt_rounded, 'Lista de Préstamos',
+                PruebasPrestamosPage()),
+            buildIconButtonWithUserId(
+                Icons.report_problem_outlined,
+                'Reporte de Gastos',
+                (userId) => ReporteGastosPage(userId: userId)),
           ],
         ),
       ),
     );
   }
+}
+
+void main() {
+  runApp(MaterialApp(
+    home: HomeScreen(userId: 'USER_ID_AQUI'),
+  ));
 }
