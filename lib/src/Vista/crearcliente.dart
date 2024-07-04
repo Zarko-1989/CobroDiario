@@ -18,6 +18,8 @@ class _CrearClienteState extends State<CrearCliente> {
   final TextEditingController celularFiadorController = TextEditingController();
   final TextEditingController direccionFiadorController =
       TextEditingController();
+  final TextEditingController referenciasPersonalesController =
+      TextEditingController();
 
   void _agregarCliente() async {
     try {
@@ -32,6 +34,7 @@ class _CrearClienteState extends State<CrearCliente> {
         'NombreFiador': nombreFiadorController.text,
         'CelularFiador': celularFiadorController.text,
         'DireccionFiador': direccionFiadorController.text,
+        'ReferenciasPersonales': referenciasPersonalesController.text,
       });
       _limpiarCampos();
       ScaffoldMessenger.of(context).showSnackBar(
@@ -60,6 +63,7 @@ class _CrearClienteState extends State<CrearCliente> {
     nombreFiadorController.clear();
     celularFiadorController.clear();
     direccionFiadorController.clear();
+    referenciasPersonalesController.clear();
   }
 
   @override
@@ -112,6 +116,10 @@ class _CrearClienteState extends State<CrearCliente> {
             TextField(
               controller: direccionFiadorController,
               decoration: InputDecoration(labelText: 'Dirección Fiador'),
+            ),
+            TextField(
+              controller: referenciasPersonalesController,
+              decoration: const InputDecoration(labelText: 'Referencias Personales'),
             ),
             SizedBox(height: 20),
             ElevatedButton(

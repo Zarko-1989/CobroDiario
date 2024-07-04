@@ -9,7 +9,10 @@ class CrearPrestamosScreen extends StatefulWidget {
 class _CrearPrestamosScreenState extends State<CrearPrestamosScreen> {
   TextEditingController cedulaController = TextEditingController();
   TextEditingController valorController = TextEditingController();
+  TextEditingController abonoCapitalController =
+      TextEditingController(); // Nuevo controlador para el abono al capital
   String formaPago = 'Diaria';
+  String tipoPago = 'Libre'; // Nueva variable para el tipo de pago
   final firebase = FirebaseFirestore.instance;
 
   bool clienteExiste = true; // Variable para controlar si el cliente existe
@@ -55,6 +58,10 @@ class _CrearPrestamosScreenState extends State<CrearPrestamosScreen> {
       // Calcular el valor de los intereses (20% del valor del préstamo)
       double valorPrestamo = double.parse(valorController.text);
       double valorIntereses = valorPrestamo * 0.20;
+      double valor_Total = valorIntereses + valorPrestamo;
+      double abonoCapital = tipoPago == 'Interes+Capital'
+          ? double.parse(abonoCapitalController.text)
+          : 0.0;
 
       // Generar un ID único para el préstamo
       String prestamoId = firebase.collection('Prestamos').doc().id;
@@ -69,8 +76,11 @@ class _CrearPrestamosScreenState extends State<CrearPrestamosScreen> {
         "ValorPrestamo": valorPrestamo, // Convertir a numérico
         "ValorIntereses": valorIntereses, // Valor de los intereses
         "FormaPago": formaPago,
+        "TipoPago": tipoPago, // Guardar el tipo de pago
+        "AbonoCapital": abonoCapital, // Guardar el abono al capital
         "DiaSemana": diaSemana, // Guardar el día de la semana
         "Fecha": DateTime.now(),
+        "ValorTotal": valor_Total,
       });
 
       // Mostrar mensaje de éxito
@@ -129,7 +139,7 @@ class _CrearPrestamosScreenState extends State<CrearPrestamosScreen> {
                   decimal: true), // Tipo numérico para el valor del préstamo
             ),
             const SizedBox(height: 20),
-            Text('Forma de Pago:'),
+            const Text('Forma de Pago:'),
             DropdownButton<String>(
               value: formaPago,
               onChanged: (String? newValue) {
@@ -145,6 +155,31 @@ class _CrearPrestamosScreenState extends State<CrearPrestamosScreen> {
                 );
               }).toList(),
             ),
+            const SizedBox(height: 20),
+            const Text('Tipo de Pago:'),
+            DropdownButton<String>(
+              value: tipoPago,
+              onChanged: (String? newValue) {
+                setState(() {
+                  tipoPago = newValue!;
+                });
+              },
+              items: <String>['Libre', 'Interes+Capital']
+                  .map<DropdownMenuItem<String>>((String value) {
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(value),
+                );
+              }).toList(),
+            ),
+            if (tipoPago == 'Interes+Capital')
+              TextField(
+                controller: abonoCapitalController,
+                decoration:
+                    const InputDecoration(labelText: 'Abono al Capital'),
+                keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true), // Tipo numérico para el abono al capital
+              ),
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: registroPrestamo,

@@ -75,7 +75,33 @@ class _PruebasPrestamosPageState extends State<PruebasPrestamosPage> {
               DocumentSnapshot document = snapshot.data!.docs[index];
               Map<String, dynamic> data =
                   document.data() as Map<String, dynamic>;
-              return _buildPrestamoCard(data, document.id);
+              return FutureBuilder(
+                future: _getClienteInfo(data['CedulaCliente']
+                    .toString()), // Convert CedulaCliente to String
+                builder: (BuildContext context,
+                    AsyncSnapshot<Map<String, String>> clienteSnapshot) {
+                  if (clienteSnapshot.connectionState ==
+                      ConnectionState.waiting) {
+                    return Center(
+                      child: CircularProgressIndicator(),
+                    );
+                  }
+                  if (clienteSnapshot.hasError || !clienteSnapshot.hasData) {
+                    return Center(
+                      child: Text(
+                        'Error al cargar la información del cliente',
+                        style: TextStyle(fontSize: 18, color: Colors.red),
+                      ),
+                    );
+                  }
+                  Map<String, String> clienteInfo = clienteSnapshot.data!;
+                  String nombreCliente = clienteInfo['Nombre'] ?? 'Desconocido';
+                  String trabajoCliente =
+                      clienteInfo['Trabajo'] ?? 'Desconocido';
+                  return _buildPrestamoCard(
+                      data, document.id, nombreCliente, trabajoCliente);
+                },
+              );
             },
           );
         },
@@ -83,7 +109,28 @@ class _PruebasPrestamosPageState extends State<PruebasPrestamosPage> {
     );
   }
 
-  Widget _buildPrestamoCard(Map<String, dynamic> data, String prestamoId) {
+  Future<Map<String, String>> _getClienteInfo(String cedulaCliente) async {
+    try {
+      var clienteSnapshot = await FirebaseFirestore.instance
+          .collection('Clientes')
+          .where('Cedula', isEqualTo: cedulaCliente)
+          .limit(1)
+          .get();
+      if (clienteSnapshot.docs.isNotEmpty) {
+        var clienteData = clienteSnapshot.docs.first.data();
+        return {
+          'Nombre': clienteData['Nombre'] as String,
+          'Trabajo': clienteData['Trabajo'] as String,
+        };
+      }
+    } catch (e) {
+      print('Error al obtener la información del cliente: $e');
+    }
+    return {};
+  }
+
+  Widget _buildPrestamoCard(Map<String, dynamic> data, String prestamoId,
+      String nombreCliente, String trabajoCliente) {
     DateTime fecha = data['Fecha'].toDate();
     String formaPago = data['FormaPago'];
     double valorIntereses = data['ValorIntereses'].toDouble();
@@ -93,24 +140,27 @@ class _PruebasPrestamosPageState extends State<PruebasPrestamosPage> {
         .toList();
     double deuda = data['Deuda'] != null ? data['Deuda'].toDouble() : 0;
     double valorPrestamo = data['ValorPrestamo'].toDouble();
+    double abonoCapital =
+        data['AbonoCapital'] != null ? data['AbonoCapital'].toDouble() : 0;
 
     int? diaSemana = data['DiaSemana'] as int?;
     String diaSemanaTexto = _getDiaSemanaText(diaSemana);
 
     return Card(
       elevation: 5,
-      margin: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           ListTile(
             title: Text(
-              'Cédula Cliente: ${data['CedulaCliente']}',
-              style: TextStyle(fontWeight: FontWeight.bold),
+              'Cliente: $nombreCliente (Cédula: ${data['CedulaCliente']})',
+              style: const TextStyle(fontWeight: FontWeight.bold),
             ),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Text('Trabajo: $trabajoCliente'),
                 SizedBox(height: 8),
                 Text(
                   'Fecha: ${DateFormat('dd/MM/yyyy').format(fecha)}',
@@ -119,6 +169,7 @@ class _PruebasPrestamosPageState extends State<PruebasPrestamosPage> {
                 Text('Forma de Pago: $formaPago'),
                 Text('Valor Intereses: ${valorIntereses.toStringAsFixed(0)}'),
                 Text('Valor Préstamo: ${valorPrestamo.toStringAsFixed(0)}'),
+                Text('Abono Capital: ${abonoCapital.toStringAsFixed(0)}'),
                 if (deuda > 0) Text('Deuda: ${deuda.toStringAsFixed(0)}'),
                 const SizedBox(height: 8),
                 const Text('Pagos realizados:',
@@ -143,8 +194,16 @@ class _PruebasPrestamosPageState extends State<PruebasPrestamosPage> {
             children: [
               ElevatedButton(
                 onPressed: () {
-                  _mostrarDialogoIngresarCuotas(context, prestamoId, formaPago,
-                      valorIntereses, pagos, deuda);
+                  _mostrarDialogoIngresarCuotas(
+                      context,
+                      prestamoId,
+                      formaPago,
+                      valorIntereses,
+                      pagos,
+                      deuda,
+                      data['TipoPago'],
+                      data['ValorTotal'],
+                      abonoCapital);
                 },
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
                 child: const Text('Ingresar Cuotas',
@@ -243,9 +302,12 @@ class _PruebasPrestamosPageState extends State<PruebasPrestamosPage> {
       String formaPago,
       double valorIntereses,
       List<double> pagos,
-      double deudaExistente) {
+      double deudaExistente,
+      String tipoPago,
+      double valorTotal,
+      double abonoCapitalFromDB) {
     int cantidadCuotas = _getCantidadCuotas(formaPago);
-    double valorCuota = valorIntereses / cantidadCuotas;
+    double cuotaBase = valorIntereses / cantidadCuotas;
 
     TextEditingController pagoController = TextEditingController();
 
@@ -257,13 +319,25 @@ class _PruebasPrestamosPageState extends State<PruebasPrestamosPage> {
           content: SingleChildScrollView(
             child: Column(
               children: [
-                Text('Cuota: ${valorCuota.toStringAsFixed(0)}'),
                 TextField(
                   controller: pagoController,
                   keyboardType: TextInputType.number,
-                  decoration:
-                      const InputDecoration(labelText: 'Pago realizado'),
+                  decoration: const InputDecoration(
+                      labelText: 'Valor del Abono Capital'),
                 ),
+                if (tipoPago == 'Interes+Capital')
+                  ValueListenableBuilder<TextEditingValue>(
+                    valueListenable: pagoController,
+                    builder: (context, value, child) {
+                      double abonoCapital = double.tryParse(value.text) ?? 0;
+                      double cuotaTotal = cuotaBase + abonoCapital;
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 16.0),
+                        child: Text(
+                            'Cuota Total: ${cuotaTotal.toStringAsFixed(2)}'),
+                      );
+                    },
+                  ),
               ],
             ),
           ),
@@ -275,22 +349,35 @@ class _PruebasPrestamosPageState extends State<PruebasPrestamosPage> {
               child: const Text('Cancelar'),
             ),
             TextButton(
-              onPressed: () {
-                double pagoRealizado =
+              onPressed: () async {
+                double abonoCapitalEntered =
                     double.tryParse(pagoController.text) ?? 0;
+                double cuotaTotal =
+                    cuotaBase + abonoCapitalFromDB + abonoCapitalEntered;
 
-                if (pagoRealizado > 0) {
-                  List<double> nuevasCuotas = [pagoRealizado];
+                if (cuotaTotal > 0) {
+                  List<double> nuevasCuotas = [...pagos, cuotaTotal];
                   double nuevaDeuda =
-                      _calcularDeuda(nuevasCuotas, valorCuota, deudaExistente);
+                      _calcularDeuda(nuevasCuotas, cuotaBase, deudaExistente);
+                  double nuevoValorTotal = valorTotal - cuotaTotal;
 
-                  FirebaseFirestore.instance
+                  Map<String, dynamic> updateData = {
+                    'Pagos': FieldValue.arrayUnion([cuotaTotal]),
+                    'Deuda': nuevaDeuda,
+                    'ValorTotal': nuevoValorTotal,
+                  };
+
+                  if (nuevoValorTotal <= 0) {
+                    updateData['inactivo'] = true;
+                    updateData['ValorTotal'] =
+                        0; // Asegurarse de que ValorTotal no sea menor a 0
+                  }
+
+                  // Actualizar en Firestore
+                  await FirebaseFirestore.instance
                       .collection('Prestamos')
                       .doc(prestamoId)
-                      .update({
-                    'Pagos': FieldValue.arrayUnion(nuevasCuotas),
-                    'Deuda': nuevaDeuda,
-                  });
+                      .update(updateData);
 
                   Navigator.of(context).pop();
                 }
