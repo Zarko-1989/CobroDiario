@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pagosdiarios/src/Vista/GestionarUser.dart';
+import 'package:pagosdiarios/src/Vista/contabilidaDiaria.dart';
+import 'package:pagosdiarios/src/Vista/creaciondeRutas.dart';
 import 'package:pagosdiarios/src/Vista/crearcliente.dart';
 import 'package:pagosdiarios/src/Vista/crearPrestamos.dart';
 import 'package:pagosdiarios/src/Vista/lista_prestamos2.dart';
@@ -58,6 +60,19 @@ class _HomeScreenState extends State<HomeScreen> {
       print("Error fetching user name: $e");
     }
     return 'Usuario';
+  }
+
+  void _registrarAccion(String tipo, double monto) {
+    try {
+      FirebaseFirestore.instance.collection('Acciones').add({
+        'Fecha': DateTime.now().toLocal().toString().split(' ')[0],
+        'Tipo': tipo,
+        'Monto': monto,
+        'Usuario': widget.userId,
+      });
+    } catch (e) {
+      print("Error registrando acción: $e");
+    }
   }
 
   Widget buildIconButton(IconData icon, String label, Widget destination) {
@@ -157,6 +172,26 @@ class _HomeScreenState extends State<HomeScreen> {
               }
             },
           ),
+          FutureBuilder<bool>(
+            future: isAdmin,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return Center(child: CircularProgressIndicator());
+              } else if (snapshot.hasData && snapshot.data == true) {
+                return IconButton(
+                  icon: Icon(Icons.directions),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => RutasPage()),
+                    );
+                  },
+                );
+              } else {
+                return SizedBox.shrink(); // No mostrar nada si no es admin
+              }
+            },
+          ),
         ],
       ),
       body: Center(
@@ -175,6 +210,32 @@ class _HomeScreenState extends State<HomeScreen> {
                 Icons.report_problem_outlined,
                 'Reporte de Gastos',
                 (userId) => ReporteGastosPage(userId: userId)),
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => ContabilidadDiaria()),
+                );
+              },
+              child: Card(
+                elevation: 4,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Container(
+                  width: 120,
+                  height: 120,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.account_balance_wallet, size: 48),
+                      SizedBox(height: 8),
+                      Text('Contabilidad Diaria', textAlign: TextAlign.center),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),

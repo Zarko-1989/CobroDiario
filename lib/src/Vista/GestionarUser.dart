@@ -18,81 +18,82 @@ class _GestionUsersState extends State<GestionUsers> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Gestión de Usuarios'),
+        title: const Text('Gestión de Usuarios'),
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(20),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
+            const Text(
               'Agregar/Editar Usuario',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             TextField(
               controller: documentoController,
-              decoration: InputDecoration(labelText: 'Documento'),
+              decoration: const InputDecoration(labelText: 'Documento'),
             ),
             TextField(
               controller: estadoController,
-              decoration: InputDecoration(labelText: 'Estado'),
+              decoration: const InputDecoration(labelText: 'Estado'),
             ),
             TextField(
               controller: nombreController,
-              decoration: InputDecoration(labelText: 'Nombre'),
+              decoration: const InputDecoration(labelText: 'Nombre'),
             ),
             TextField(
               controller: passwordController,
-              decoration: InputDecoration(labelText: 'Password'),
+              decoration: const InputDecoration(labelText: 'Password'),
             ),
             TextField(
               controller: rolController,
-              decoration: InputDecoration(labelText: 'Rol'),
+              decoration: const InputDecoration(labelText: 'Rol'),
             ),
-            SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            const SizedBox(height: 20),
+            Wrap(
+              spacing: 10, // espacio horizontal entre botones
+              runSpacing: 10, // espacio vertical entre botones
               children: [
                 ElevatedButton(
                   onPressed: () {
                     _limpiarCampos();
                   },
-                  child: Text('Limpiar Campos'),
+                  child: const Text('Limpiar Campos'),
                 ),
                 ElevatedButton(
                   onPressed: () {
                     _addUser();
                   },
-                  child: Text('Agregar'),
+                  child: const Text('Agregar'),
                 ),
                 ElevatedButton(
                   onPressed: () {
                     _updateUser(documentoController.text);
                   },
-                  child: Text('Actualizar'),
+                  child: const Text('Actualizar'),
                 ),
                 ElevatedButton(
                   onPressed: () {
                     _deleteUser(documentoController.text);
                   },
-                  child: Text('Eliminar'),
+                  child: const Text('Eliminar'),
                 ),
               ],
             ),
-            SizedBox(height: 40),
-            Divider(),
-            SizedBox(height: 20),
-            Text(
+            const SizedBox(height: 40),
+            const Divider(),
+            const SizedBox(height: 20),
+            const Text(
               'Lista de Usuarios',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             StreamBuilder(
               stream: _firestore.collection('Users').snapshots(),
               builder: (context, snapshot) {
                 if (!snapshot.hasData) {
-                  return CircularProgressIndicator();
+                  return const CircularProgressIndicator();
                 }
 
                 var users = snapshot.data!.docs;

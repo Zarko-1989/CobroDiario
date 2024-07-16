@@ -147,8 +147,14 @@ class _CrearPrestamosScreenState extends State<CrearPrestamosScreen> {
                   formaPago = newValue!;
                 });
               },
-              items: <String>['Diaria', 'Semanal', 'Quincenal', 'Mensual']
-                  .map<DropdownMenuItem<String>>((String value) {
+              items: <String>[
+                'Diaria',
+                '20 Dias',
+                '24 Dias',
+                'Semanal',
+                'Quincenal',
+                'Mensual'
+              ].map<DropdownMenuItem<String>>((String value) {
                 return DropdownMenuItem<String>(
                   value: value,
                   child: Text(value),
