@@ -75,7 +75,7 @@ class LoginPageState extends State<LoginPage> {
               ),
             ),
             Padding(
-              padding: EdgeInsets.all(20),
+              padding: const EdgeInsets.all(20),
               child: TextField(
                 controller: pass,
                 decoration: InputDecoration(
@@ -88,14 +88,14 @@ class LoginPageState extends State<LoginPage> {
               ),
             ),
             Padding(
-              padding: EdgeInsets.only(left: 20, top: 50, right: 10),
+              padding: const EdgeInsets.only(left: 20, top: 50, right: 10),
               child: Center(
                 child: ElevatedButton(
                   onPressed: () {
                     print('Ingresando...');
                     validarDatos();
                   },
-                  child: Text('Ingresar'),
+                  child: const Text('Ingresar'),
                 ),
               ),
             ),

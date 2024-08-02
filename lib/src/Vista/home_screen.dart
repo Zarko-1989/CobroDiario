@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pagosdiarios/src/Vista/GestionarUser.dart';
-import 'package:pagosdiarios/src/Vista/contabilidaDiaria.dart';
+import 'package:pagosdiarios/src/Vista/contabilidad_del_dia.dart';
 import 'package:pagosdiarios/src/Vista/creaciondeRutas.dart';
 import 'package:pagosdiarios/src/Vista/crearcliente.dart';
-import 'package:pagosdiarios/src/Vista/crearPrestamos.dart';
+import 'package:pagosdiarios/src/Vista/crearPrestamos2.dart';
 import 'package:pagosdiarios/src/Vista/lista_prestamos2.dart';
+//import 'package:pagosdiarios/src/Vista/listaprestamos3Prueba.dart';
+import 'package:pagosdiarios/src/Vista/lista_prestamos_screen.dart';
 import 'package:pagosdiarios/src/Vista/reporteGastos.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -202,40 +204,20 @@ class _HomeScreenState extends State<HomeScreen> {
           mainAxisSpacing: 16.0,
           children: [
             buildIconButton(Icons.person_add, 'Crear Cliente', CrearCliente()),
+            buildIconButton(
+                Icons.free_cancellation_sharp,
+                'Pruebas',
+                ListaPrestamosScreen(
+                  userId: widget.userId,
+                )),
             buildIconButton(Icons.monetization_on, 'Crear Préstamo',
                 CrearPrestamosScreen()),
             buildIconButton(Icons.list_alt_rounded, 'Lista de Préstamos',
-                PruebasPrestamosPage()),
-            buildIconButtonWithUserId(
-                Icons.report_problem_outlined,
-                'Reporte de Gastos',
-                (userId) => ReporteGastosPage(userId: userId)),
-            GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => ContabilidadDiaria()),
-                );
-              },
-              child: Card(
-                elevation: 4,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Container(
-                  width: 120,
-                  height: 120,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.account_balance_wallet, size: 48),
-                      SizedBox(height: 8),
-                      Text('Contabilidad Diaria', textAlign: TextAlign.center),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+                PruebasPrestamosPage(userId: widget.userId)),
+            buildIconButton(
+                Icons.money_sharp, 'Contabilidad', ContabilidadDelDia()),
+            buildIconButtonWithUserId(Icons.report_problem_outlined,
+                'Reporte de Gastos', (userId) => ContabilidadDelDia()),
           ],
         ),
       ),

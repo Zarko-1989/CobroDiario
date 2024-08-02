@@ -4,9 +4,7 @@ import 'package:intl/intl.dart';
 
 class ReporteGastosPage extends StatefulWidget {
   final String userId;
-
   ReporteGastosPage({required this.userId});
-
   @override
   _ReporteGastosPageState createState() => _ReporteGastosPageState();
 }
