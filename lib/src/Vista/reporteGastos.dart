@@ -42,14 +42,26 @@ class _ReporteGastosPageState extends State<ReporteGastosPage> {
     if (_formKey.currentState!.validate()) {
       final String concepto = _conceptoController.text;
       final double valor = double.parse(_valorController.text);
+      final double montoNegativo = -valor; // Convertir el valor a negativo
       final DateTime fecha = DateTime.now();
+      final String fechaFormateada = DateFormat('dd/MM/yyyy').format(fecha);
 
+      // Guardar en la colección "Gastos"
       FirebaseFirestore.instance.collection('Gastos').add({
         'UsuarioId': widget.userId,
         'UsuarioNombre': userName,
-        'Concepto': concepto,
-        'Valor': valor,
-        'Fecha': fecha,
+        'TipoMovimiento': concepto,
+        'Monto': montoNegativo, // Guardar el monto como negativo
+        'Fecha': fechaFormateada, // Guardar la fecha en formato DD/MM/YYYY
+      }).then((_) {
+        // También guardar en la colección "Movimientos"
+        return FirebaseFirestore.instance.collection('Movimientos').add({
+          'UsuarioId': widget.userId,
+          'UsuarioNombre': userName,
+          'TipoMovimiento': concepto,
+          'Monto': montoNegativo, // Guardar el monto como negativo
+          'Fecha': fechaFormateada, // Guardar la fecha en formato DD/MM/YYYY
+        });
       }).then((_) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Gasto registrado exitosamente')),
@@ -108,7 +120,8 @@ class _ReporteGastosPageState extends State<ReporteGastosPage> {
                       },
                     ),
                     SizedBox(height: 20),
-                    Text('Fecha: ${DateFormat.yMd().format(DateTime.now())}'),
+                    Text(
+                        'Fecha: ${DateFormat('dd/MM/yyyy').format(DateTime.now())}'),
                     SizedBox(height: 20),
                     ElevatedButton(
                       onPressed: () => _submitForm(snapshot.data!),

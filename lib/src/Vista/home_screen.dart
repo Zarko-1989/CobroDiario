@@ -216,8 +216,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 PruebasPrestamosPage(userId: widget.userId)),
             buildIconButton(
                 Icons.money_sharp, 'Contabilidad', ContabilidadDelDia()),
-            buildIconButtonWithUserId(Icons.report_problem_outlined,
-                'Reporte de Gastos', (userId) => ContabilidadDelDia()),
+            buildIconButtonWithUserId(
+                Icons.report_problem_outlined,
+                'Reporte de Gastos',
+                (userId) => ReporteGastosPage(userId: widget.userId)),
           ],
         ),
       ),

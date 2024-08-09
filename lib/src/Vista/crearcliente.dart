@@ -9,7 +9,6 @@ class CrearCliente extends StatefulWidget {
 class _CrearClienteState extends State<CrearCliente> {
   final TextEditingController cedulaController = TextEditingController();
   final TextEditingController nombreController = TextEditingController();
-  final TextEditingController apellidoController = TextEditingController();
   final TextEditingController celularController = TextEditingController();
   final TextEditingController trabajoController = TextEditingController();
   final TextEditingController barrioController = TextEditingController();
@@ -26,7 +25,6 @@ class _CrearClienteState extends State<CrearCliente> {
       await FirebaseFirestore.instance.collection('Clientes').add({
         'Cedula': cedulaController.text,
         'Nombre': nombreController.text,
-        'Apellido': apellidoController.text,
         'Celular': celularController.text,
         'Trabajo': trabajoController.text,
         'Barrio': barrioController.text,
@@ -55,7 +53,6 @@ class _CrearClienteState extends State<CrearCliente> {
   void _limpiarCampos() {
     cedulaController.clear();
     nombreController.clear();
-    apellidoController.clear();
     celularController.clear();
     trabajoController.clear();
     barrioController.clear();
@@ -83,11 +80,7 @@ class _CrearClienteState extends State<CrearCliente> {
             ),
             TextField(
               controller: nombreController,
-              decoration: InputDecoration(labelText: 'Nombre'),
-            ),
-            TextField(
-              controller: apellidoController,
-              decoration: InputDecoration(labelText: 'Apellido'),
+              decoration: InputDecoration(labelText: 'Nombre Completo'),
             ),
             TextField(
               controller: celularController,
@@ -119,7 +112,8 @@ class _CrearClienteState extends State<CrearCliente> {
             ),
             TextField(
               controller: referenciasPersonalesController,
-              decoration: const InputDecoration(labelText: 'Referencias Personales'),
+              decoration:
+                  const InputDecoration(labelText: 'Referencias Personales'),
             ),
             SizedBox(height: 20),
             ElevatedButton(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 
 class ListaPrestamosScreen extends StatefulWidget {
   final String userId;
@@ -14,9 +15,12 @@ class _ListaPrestamosScreenState extends State<ListaPrestamosScreen> {
   final FirebaseFirestore _firebase = FirebaseFirestore.instance;
   final TextEditingController _abonoController = TextEditingController();
   final TextEditingController _cuotaController = TextEditingController();
+  final TextEditingController _pagoDeudaController = TextEditingController();
 
-  Future<void> _abonar(String prestamoId, double abono) async {
+  Future<void> _abonar(
+      String prestamoId, double abono, String cedulaCliente) async {
     try {
+      // Referencia al documento del préstamo
       DocumentReference prestamoRef =
           _firebase.collection('Prestamos').doc(prestamoId);
       DocumentSnapshot prestamoDoc = await prestamoRef.get();
@@ -43,10 +47,41 @@ class _ListaPrestamosScreenState extends State<ListaPrestamosScreen> {
         // Determinar el estado del préstamo
         final estado = nuevoSaldoPendiente <= 0 ? 'Inactivo' : 'Activo';
 
+        // Actualizar el documento del préstamo
         await prestamoRef.update({
           'ValorTotal': nuevoSaldoPendiente,
           'Cuota_Aproximada': nuevaCuotaAproximada,
-          'Estado': estado, // Actualizar el estado del préstamo
+          'Estado': estado,
+        });
+
+        // Obtener el nombre del cliente
+        final clienteData = await _buscarDatosCliente(cedulaCliente);
+        final clienteNombre = clienteData?['Nombre'] ?? 'Nombre no disponible';
+
+        // Guardar el abono en la colección 'Abonos'
+        final abonosRef = FirebaseFirestore.instance.collection('Abonos').doc();
+        DateTime fechaActual = DateTime.now();
+        final DateFormat formatoFecha = DateFormat('dd/MM/yyyy');
+        final String fechaFormateada = formatoFecha.format(fechaActual);
+
+        await abonosRef.set({
+          'PrestamoId': prestamoId,
+          'Monto': abono,
+          'Fecha': fechaFormateada,
+          'CedulaCliente': cedulaCliente,
+          'NombreCliente': clienteNombre,
+        });
+
+        // Guardar el movimiento en la colección 'Movimientos'
+        final movimientosRef =
+            FirebaseFirestore.instance.collection('Movimientos').doc();
+        await movimientosRef.set({
+          'PrestamoId': prestamoId,
+          'TipoMovimiento': 'Abono',
+          'Monto': abono,
+          'Fecha': fechaFormateada,
+          'CedulaCliente': cedulaCliente,
+          'NombreCliente': clienteNombre,
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -61,7 +96,7 @@ class _ListaPrestamosScreenState extends State<ListaPrestamosScreen> {
     }
   }
 
-  Future<void> _pagarCuota(String prestamoId, double cuota) async {
+  Future<void> _pagarDeuda(String prestamoId, double monto) async {
     try {
       DocumentReference prestamoRef =
           _firebase.collection('Prestamos').doc(prestamoId);
@@ -70,12 +105,123 @@ class _ListaPrestamosScreenState extends State<ListaPrestamosScreen> {
       if (prestamoDoc.exists) {
         final data = prestamoDoc.data() as Map<String, dynamic>;
         final saldoPendiente = (data['ValorTotal'] as num?)?.toDouble() ?? 0;
-        final numCuotas = (data['Numero_Cuotas'] as num?)?.toDouble() ?? 0;
+        final deudaPendiente =
+            (data['Deuda_Pendiente'] as num?)?.toDouble() ?? 0;
 
-        final nuevoSaldoPendiente = saldoPendiente - cuota;
-        final nuevasCuotasRestantes = numCuotas - 1;
+        final nuevoSaldoPendiente = saldoPendiente - monto;
+        var nuevaDeudaPendiente = deudaPendiente - monto;
 
         if (nuevoSaldoPendiente < 0) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content: Text('El pago de deuda excede el saldo pendiente')),
+          );
+          return;
+        }
+
+        if (nuevaDeudaPendiente < 0) {
+          nuevaDeudaPendiente = 0;
+        }
+
+        final estado = nuevoSaldoPendiente <= 0 ? 'Inactivo' : 'Activo';
+
+        await prestamoRef.update({
+          'ValorTotal': nuevoSaldoPendiente,
+          'Deuda_Pendiente': nuevaDeudaPendiente,
+          'Estado': estado,
+        });
+
+        // Guardar el movimiento en la colección 'Movimientos'
+        final movimientosRef =
+            FirebaseFirestore.instance.collection('Movimientos').doc();
+        DateTime fechaActual = DateTime.now();
+        final DateFormat formatoFecha = DateFormat('dd/MM/yyyy');
+        final String fechaFormateada = formatoFecha.format(fechaActual);
+
+        await movimientosRef.set({
+          'PrestamoId': prestamoId,
+          'TipoMovimiento': 'Pago de Deuda',
+          'Monto': monto,
+          'Fecha': fechaFormateada,
+          'Estado': estado,
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Pago de deuda registrado exitosamente')),
+        );
+      }
+    } catch (e) {
+      print("Error al pagar deuda: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al registrar el pago de deuda')),
+      );
+    }
+  }
+
+  Future<double?> _mostrarDialogoPagoDeuda(BuildContext context) {
+    return showDialog<double>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Ingresar Pago de Deuda'),
+          content: TextField(
+            controller: _pagoDeudaController,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(
+              labelText: 'Monto del pago',
+              hintText: 'Ingrese el monto',
+            ),
+            onChanged: (value) {
+              if (value.isNotEmpty) {
+                final parsedValue = double.tryParse(value);
+                if (parsedValue != null) {
+                  _pagoDeudaController.text = parsedValue.toStringAsFixed(0);
+                  _pagoDeudaController.selection = TextSelection.fromPosition(
+                    TextPosition(offset: _pagoDeudaController.text.length),
+                  );
+                } else {
+                  _pagoDeudaController.text = '';
+                }
+              }
+            },
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(null); // Cancelar
+              },
+              child: Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final monto = double.tryParse(_pagoDeudaController.text);
+                Navigator.of(context).pop(monto); // Pasar el monto
+              },
+              child: Text('Confirmar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _pagarCuota(String prestamoId, double cuota) async {
+    try {
+      DocumentReference prestamoRef =
+          _firebase.collection('Prestamos').doc(prestamoId);
+      DocumentSnapshot prestamoDoc = await prestamoRef.get();
+
+      if (prestamoDoc.exists) {
+        final data = prestamoDoc.data() as Map<String, dynamic>;
+        final cuotaAproximada =
+            (data['Cuota_Aproximada'] as num?)?.toDouble() ?? 0;
+        final deudaPendiente =
+            (data['Deuda_Pendiente'] as num?)?.toDouble() ?? 0;
+        final valorTotal = (data['ValorTotal'] as num?)?.toDouble() ?? 0;
+        final numCuotas = (data['Numero_Cuotas'] as num?)?.toDouble() ?? 0;
+
+        // Verificar si el pago excede el saldo pendiente
+        if (cuota > valorTotal) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
                 content: Text('El pago de cuota excede el saldo pendiente')),
@@ -83,21 +229,45 @@ class _ListaPrestamosScreenState extends State<ListaPrestamosScreen> {
           return;
         }
 
-        if (nuevasCuotasRestantes < 0) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content: Text('El número de cuotas no puede ser negativo')),
-          );
-          return;
+        // Calcular el nuevo saldo pendiente y la nueva deuda pendiente
+        double nuevoSaldoPendiente = valorTotal - cuota;
+        double nuevaDeudaPendiente = deudaPendiente;
+
+        if (cuota < cuotaAproximada) {
+          nuevaDeudaPendiente += cuotaAproximada - cuota;
+        } else {
+          nuevaDeudaPendiente -= cuota - cuotaAproximada;
         }
 
-        // Determinar el estado del préstamo
+        if (nuevaDeudaPendiente < 0) {
+          nuevaDeudaPendiente = 0;
+        }
+
+        // Calcular el nuevo estado
+        final nuevasCuotasRestantes = numCuotas - 1;
         final estado = nuevoSaldoPendiente <= 0 ? 'Inactivo' : 'Activo';
 
+        // Actualizar el documento del préstamo
         await prestamoRef.update({
           'ValorTotal': nuevoSaldoPendiente,
           'Numero_Cuotas': nuevasCuotasRestantes,
-          'Estado': estado, // Actualizar el estado del préstamo
+          'Estado': estado,
+          'Deuda_Pendiente': nuevaDeudaPendiente,
+        });
+
+        // Guardar el movimiento en la colección 'Movimientos'
+        final movimientosRef =
+            FirebaseFirestore.instance.collection('Movimientos').doc();
+        DateTime fechaActual = DateTime.now();
+        final DateFormat formatoFecha = DateFormat('dd/MM/yyyy');
+        final String fechaFormateada = formatoFecha.format(fechaActual);
+
+        await movimientosRef.set({
+          'PrestamoId': prestamoId,
+          'TipoMovimiento': 'Pago de Cuota',
+          'Monto': cuota,
+          'Fecha': fechaFormateada,
+          'Estado': estado,
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -271,8 +441,9 @@ class _ListaPrestamosScreenState extends State<ListaPrestamosScreen> {
                   (prestamo['ValorTotal'] as num?)?.toDouble() ?? 0;
               final numCuotas =
                   (prestamo['Numero_Cuotas'] as num?)?.toDouble() ?? 0;
-              final estado = prestamo['Estado'] ??
-                  'Activo'; // Obtener el estado del préstamo
+              final estado = prestamo['Estado'] ?? 'Activo';
+              final deudaPendiente =
+                  (prestamo['Deuda_Pendiente'] as num?)?.toDouble() ?? 0;
 
               return FutureBuilder<Map<String, dynamic>?>(
                 future: _buscarDatosCliente(cedula),
@@ -369,6 +540,10 @@ class _ListaPrestamosScreenState extends State<ListaPrestamosScreen> {
                                   'Cuotas Restantes: ${numCuotas.toStringAsFixed(0)}',
                                   style:
                                       Theme.of(context).textTheme.bodyMedium),
+                              Text(
+                                  'Deuda Pendiente: \$${deudaPendiente.toStringAsFixed(0)}',
+                                  style:
+                                      Theme.of(context).textTheme.bodyMedium),
                             ],
                           ),
                           trailing: Column(
@@ -387,17 +562,18 @@ class _ListaPrestamosScreenState extends State<ListaPrestamosScreen> {
                             ],
                           ),
                         ),
-                        if (estado ==
-                            'Activo') // Mostrar botones solo si el estado es Activo
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        if (estado == 'Activo')
+                          Wrap(
+                            spacing: 8.0, // Espacio horizontal entre botones
+                            runSpacing:
+                                4.0, // Espacio vertical entre filas de botones
                             children: [
                               ElevatedButton(
                                 onPressed: () async {
                                   final abono =
                                       await _mostrarDialogoAbono(context);
                                   if (abono != null) {
-                                    _abonar(prestamoId, abono);
+                                    _abonar(prestamoId, abono, cedula);
                                   }
                                 },
                                 child: Text('Abonar'),
@@ -412,8 +588,19 @@ class _ListaPrestamosScreenState extends State<ListaPrestamosScreen> {
                                 },
                                 child: Text('Pagar Cuota'),
                               ),
+                              if (deudaPendiente > 0)
+                                ElevatedButton(
+                                  onPressed: () async {
+                                    final monto =
+                                        await _mostrarDialogoPagoDeuda(context);
+                                    if (monto != null) {
+                                      _pagarDeuda(prestamoId, monto);
+                                    }
+                                  },
+                                  child: Text('Pagar Deuda'),
+                                ),
                             ],
-                          ),
+                          )
                       ],
                     ),
                   );
