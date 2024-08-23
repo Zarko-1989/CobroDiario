@@ -19,81 +19,76 @@ class _GestionUsersState extends State<GestionUsers> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Gestión de Usuarios'),
+        backgroundColor: Colors.teal,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const Text(
               'Agregar/Editar Usuario',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.teal),
             ),
             const SizedBox(height: 20),
-            TextField(
+            _buildTextField(
               controller: documentoController,
-              decoration: const InputDecoration(labelText: 'Documento'),
+              label: 'Documento',
+              icon: Icons.card_membership,
             ),
-            TextField(
+            _buildTextField(
               controller: estadoController,
-              decoration: const InputDecoration(labelText: 'Estado'),
+              label: 'Estado',
+              icon: Icons.toggle_on,
             ),
-            TextField(
+            _buildTextField(
               controller: nombreController,
-              decoration: const InputDecoration(labelText: 'Nombre'),
+              label: 'Nombre',
+              icon: Icons.person,
             ),
-            TextField(
+            _buildTextField(
               controller: passwordController,
-              decoration: const InputDecoration(labelText: 'Password'),
+              label: 'Password',
+              icon: Icons.lock,
+              obscureText: true,
             ),
-            TextField(
+            _buildTextField(
               controller: rolController,
-              decoration: const InputDecoration(labelText: 'Rol'),
+              label: 'Rol',
+              icon: Icons.admin_panel_settings,
             ),
             const SizedBox(height: 20),
             Wrap(
               spacing: 10, // espacio horizontal entre botones
               runSpacing: 10, // espacio vertical entre botones
               children: [
-                ElevatedButton(
-                  onPressed: () {
-                    _limpiarCampos();
-                  },
-                  child: const Text('Limpiar Campos'),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    _addUser();
-                  },
-                  child: const Text('Agregar'),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    _updateUser(documentoController.text);
-                  },
-                  child: const Text('Actualizar'),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    _deleteUser(documentoController.text);
-                  },
-                  child: const Text('Eliminar'),
-                ),
+                _buildButton('Limpiar Campos', Colors.grey, _limpiarCampos),
+                _buildButton('Agregar', Colors.blueAccent, _addUser),
+                _buildButton('Actualizar', Colors.orange,
+                    () => _updateUser(documentoController.text)),
+                _buildButton('Eliminar', Colors.red,
+                    () => _deleteUser(documentoController.text)),
               ],
             ),
             const SizedBox(height: 40),
-            const Divider(),
+            const Divider(thickness: 2),
             const SizedBox(height: 20),
             const Text(
               'Lista de Usuarios',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.teal),
             ),
             const SizedBox(height: 10),
             StreamBuilder(
               stream: _firestore.collection('Users').snapshots(),
               builder: (context, snapshot) {
                 if (!snapshot.hasData) {
-                  return const CircularProgressIndicator();
+                  return Center(child: CircularProgressIndicator());
                 }
 
                 var users = snapshot.data!.docs;
@@ -103,18 +98,66 @@ class _GestionUsersState extends State<GestionUsers> {
                   itemCount: users.length,
                   itemBuilder: (context, index) {
                     var user = users[index];
-                    return ListTile(
-                      title: Text(user['Nombre']),
-                      subtitle: Text(user['Rol']),
-                      onTap: () {
-                        _mostrarDatosUsuario(user);
-                      },
+                    return Card(
+                      margin: EdgeInsets.symmetric(vertical: 8),
+                      child: ListTile(
+                        contentPadding: EdgeInsets.all(12),
+                        title: Text(user['Nombre'],
+                            style: TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: Text(user['Rol']),
+                        leading: CircleAvatar(
+                          backgroundColor: Colors.teal,
+                          child: Text(user['Nombre'][0],
+                              style: TextStyle(color: Colors.white)),
+                        ),
+                        onTap: () {
+                          _mostrarDatosUsuario(user);
+                        },
+                      ),
                     );
                   },
                 );
               },
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    bool obscureText = false,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: TextField(
+        controller: controller,
+        obscureText: obscureText,
+        decoration: InputDecoration(
+          labelText: label,
+          prefixIcon: Icon(icon),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildButton(String text, Color color, VoidCallback onPressed) {
+    return ElevatedButton(
+      onPressed: onPressed,
+      child: Text(text),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: color,
+        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        textStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
         ),
       ),
     );

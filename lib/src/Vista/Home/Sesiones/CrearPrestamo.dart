@@ -12,12 +12,14 @@ class _CrearPrestamosScreenState extends State<CrearPrestamosScreen> {
   final TextEditingController _valorPrestamoController =
       TextEditingController();
   final TextEditingController _interesController = TextEditingController();
+  final TextEditingController _cuotasController = TextEditingController();
 
   bool clienteExiste = false;
   String? _selectedMetodoPago;
   String? _selectedTipoPago;
-  int _numeroCuotas = 0;
   double _cuotaAproximada = 0.0;
+  String? _selectedRuta;
+  List<String> _rutas = [];
 
   final List<String> _metodosDePago = [
     '20 Días',
@@ -32,17 +34,36 @@ class _CrearPrestamosScreenState extends State<CrearPrestamosScreen> {
     'Interés + Capital',
   ];
 
-  final List<int> _cuotasSemanal = [5, 6, 7, 8, 9, 10, 11, 12];
-  final List<int> _cuotasQuincenal = [3, 4, 5, 6, 7, 8, 9, 10];
+  @override
+  void initState() {
+    super.initState();
+    _obtenerRutas();
+  }
 
-  double _calcularInteresIncrementado(double interesBase) {
+  Future<void> _obtenerRutas() async {
+    try {
+      final QuerySnapshot querySnapshot =
+          await FirebaseFirestore.instance.collection('Rutas').get();
+      final List<String> rutas = querySnapshot.docs
+          .where((doc) => doc['Nombre'] != null && doc['Nombre'] is String)
+          .map((doc) => doc['Nombre'] as String)
+          .toList();
+      setState(() {
+        _rutas = rutas;
+      });
+    } catch (e) {
+      print('Error al obtener rutas: $e');
+    }
+  }
+
+  double _calcularInteresIncrementado(double interesBase, int numeroCuotas) {
     double interesIncrementado = interesBase;
     if (_selectedTipoPago == 'Interés + Capital') {
-      if (_selectedMetodoPago == 'Semanal' && _numeroCuotas > 4) {
-        interesIncrementado += (_numeroCuotas - 4) *
-            5; // Incremento de 5% por cada cuota adicional
-      } else if (_selectedMetodoPago == 'Quincenal' && _numeroCuotas > 2) {
-        interesIncrementado += (_numeroCuotas - 2) *
+      if (_selectedMetodoPago == 'Semanal' && numeroCuotas > 4) {
+        interesIncrementado +=
+            (numeroCuotas - 4) * 5; // Incremento de 5% por cada cuota adicional
+      } else if (_selectedMetodoPago == 'Quincenal' && numeroCuotas > 2) {
+        interesIncrementado += (numeroCuotas - 2) *
             10; // Incremento de 10% por cada cuota adicional
       }
     }
@@ -52,20 +73,22 @@ class _CrearPrestamosScreenState extends State<CrearPrestamosScreen> {
   void _calcularCuotaAproximada() {
     final valorPrestamo = double.tryParse(_valorPrestamoController.text) ?? 0;
     final interes = double.tryParse(_interesController.text) ?? 0;
+    final numeroCuotas =
+        int.tryParse(_cuotasController.text) ?? _getNumeroCuotasPorDefecto();
 
     if (valorPrestamo > 0 &&
         interes > 0 &&
         _selectedMetodoPago != null &&
-        _selectedTipoPago != null) {
-      int numCuotas = _getNumeroCuotas(_selectedMetodoPago!);
+        _selectedTipoPago != null &&
+        numeroCuotas > 0) {
       double cuota;
-      double interesFinal = _calcularInteresIncrementado(interes);
+      double interesFinal = _calcularInteresIncrementado(interes, numeroCuotas);
 
       if (_selectedTipoPago == 'Libre') {
-        cuota = (valorPrestamo * (interesFinal / 100)) / numCuotas;
+        cuota = (valorPrestamo * (interesFinal / 100)) / numeroCuotas;
       } else if (_selectedTipoPago == 'Interés + Capital') {
         double interesTotal = valorPrestamo * (interesFinal / 100);
-        cuota = (valorPrestamo + interesTotal) / numCuotas;
+        cuota = (valorPrestamo + interesTotal) / numeroCuotas;
       } else {
         cuota = 0;
       }
@@ -76,21 +99,13 @@ class _CrearPrestamosScreenState extends State<CrearPrestamosScreen> {
     }
   }
 
-  int _getNumeroCuotas(String metodoPago) {
-    switch (metodoPago) {
-      case '20 Días':
-        return 20;
-      case '24 Días':
-        return 24;
-      case 'Semanal':
-        return _numeroCuotas > 0 ? _numeroCuotas : 4;
-      case 'Quincenal':
-        return _numeroCuotas > 0 ? _numeroCuotas : 2;
-      case 'Mensual':
-        return 1;
-      default:
-        return 1;
+  int _getNumeroCuotasPorDefecto() {
+    if (_selectedMetodoPago == 'Semanal') {
+      return 4;
+    } else if (_selectedMetodoPago == 'Quincenal') {
+      return 2;
     }
+    return 1; // Valor por defecto si el método de pago no es Semanal o Quincenal
   }
 
   Future<void> verificarCliente() async {
@@ -127,19 +142,23 @@ class _CrearPrestamosScreenState extends State<CrearPrestamosScreen> {
 
     final valorPrestamo = double.tryParse(_valorPrestamoController.text) ?? 0;
     final interesBase = double.tryParse(_interesController.text) ?? 0;
-    final interesIncrementado = _calcularInteresIncrementado(interesBase);
+    final numeroCuotas =
+        int.tryParse(_cuotasController.text) ?? _getNumeroCuotasPorDefecto();
+    final interesIncrementado =
+        _calcularInteresIncrementado(interesBase, numeroCuotas);
     final interesTotal = valorPrestamo * (interesIncrementado / 100);
     final valorTotal = valorPrestamo + interesTotal;
     final DateTime fechaActual = DateTime.now();
     final DateFormat formatoFecha = DateFormat('dd/MM/yyyy');
     final String fechaFormateada = formatoFecha.format(fechaActual);
     final String diaSemana = DateFormat('EEEE', 'es').format(fechaActual);
-    final numeroCuotas = _getNumeroCuotas(_selectedMetodoPago!);
 
     if (valorPrestamo > 0 &&
         interesBase > 0 &&
         _selectedMetodoPago != null &&
-        _selectedTipoPago != null) {
+        _selectedTipoPago != null &&
+        _selectedRuta != null &&
+        numeroCuotas > 0) {
       Map<String, dynamic> prestamoData = {
         'Cedula': _cedulaController.text,
         'Valor_Prestamo': valorPrestamo,
@@ -153,6 +172,7 @@ class _CrearPrestamosScreenState extends State<CrearPrestamosScreen> {
         'Tipo_Pago': _selectedTipoPago,
         'Cuota_Aproximada': _cuotaAproximada,
         'Numero_Cuotas': numeroCuotas,
+        'Ruta': _selectedRuta,
       };
 
       await FirebaseFirestore.instance
@@ -244,7 +264,6 @@ class _CrearPrestamosScreenState extends State<CrearPrestamosScreen> {
                 onChanged: (value) {
                   setState(() {
                     _selectedMetodoPago = value;
-                    _numeroCuotas = 0; // Reset number of installments
                     _calcularCuotaAproximada();
                   });
                 },
@@ -265,7 +284,6 @@ class _CrearPrestamosScreenState extends State<CrearPrestamosScreen> {
                 onChanged: (value) {
                   setState(() {
                     _selectedTipoPago = value;
-                    _numeroCuotas = 0; // Reset number of installments
                     _calcularCuotaAproximada();
                   });
                 },
@@ -273,37 +291,45 @@ class _CrearPrestamosScreenState extends State<CrearPrestamosScreen> {
               SizedBox(height: 16),
               if (_selectedTipoPago == 'Interés + Capital' &&
                   (_selectedMetodoPago == 'Semanal' ||
-                      _selectedMetodoPago == 'Quincenal' ||
-                      _selectedMetodoPago == '20 Días' ||
-                      _selectedMetodoPago == '24 Días'))
-                DropdownButtonFormField<int>(
-                  value: _numeroCuotas > 0 ? _numeroCuotas : null,
+                      _selectedMetodoPago == 'Quincenal'))
+                TextField(
+                  controller: _cuotasController,
                   decoration: InputDecoration(
                     labelText: 'Número de Cuotas',
                     border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.calendar_view_day),
                   ),
-                  items: (_selectedMetodoPago == 'Semanal'
-                          ? _cuotasSemanal
-                          : _selectedMetodoPago == 'Quincenal'
-                              ? _cuotasQuincenal
-                              : _selectedMetodoPago == '20 Días'
-                                  ? [20]
-                                  : _selectedMetodoPago == '24 Días'
-                                      ? [24]
-                                      : [1])
-                      .map((cuotas) {
-                    return DropdownMenuItem(
-                      value: cuotas,
-                      child: Text('$cuotas Cuotas'),
-                    );
-                  }).toList(),
+                  keyboardType: TextInputType.number,
                   onChanged: (value) {
-                    setState(() {
-                      _numeroCuotas = value ?? 0;
-                      _calcularCuotaAproximada();
-                    });
+                    _calcularCuotaAproximada();
                   },
                 ),
+              SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                value: _selectedRuta,
+                decoration: InputDecoration(
+                  labelText: 'Ruta',
+                  border: OutlineInputBorder(),
+                ),
+                items: _rutas.isNotEmpty
+                    ? _rutas.map((ruta) {
+                        return DropdownMenuItem(
+                          value: ruta,
+                          child: Text(ruta),
+                        );
+                      }).toList()
+                    : [
+                        DropdownMenuItem(
+                          value: null,
+                          child: Text('No hay rutas disponibles'),
+                        )
+                      ],
+                onChanged: (value) {
+                  setState(() {
+                    _selectedRuta = value;
+                  });
+                },
+              ),
               SizedBox(height: 20),
               Text(
                 'Cuota: ${_cuotaAproximada.toStringAsFixed(0)}',

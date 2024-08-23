@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:pagosdiarios/src/Vista/GestionarUser.dart';
-import 'package:pagosdiarios/src/Vista/contabilidad_del_dia.dart';
-import 'package:pagosdiarios/src/Vista/creaciondeRutas.dart';
-import 'package:pagosdiarios/src/Vista/crearcliente.dart';
-import 'package:pagosdiarios/src/Vista/crearPrestamos2.dart';
-import 'package:pagosdiarios/src/Vista/lista_prestamos2.dart';
-//import 'package:pagosdiarios/src/Vista/listaprestamos3Prueba.dart';
-import 'package:pagosdiarios/src/Vista/lista_prestamos_screen.dart';
-import 'package:pagosdiarios/src/Vista/reporteGastos.dart';
+import 'package:pagosdiarios/src/Vista/Admins/GestionarRutas.dart';
+import 'package:pagosdiarios/src/Vista/Admins/GestionarUsers.dart';
+import 'package:pagosdiarios/src/Vista/Home/Sesiones/CrearCliente.dart';
+import 'package:pagosdiarios/src/Vista/Home/Sesiones/CrearPrestamo.dart';
+import 'package:pagosdiarios/src/Vista/Home/Sesiones/ListaPrestamos.dart';
+import 'package:pagosdiarios/src/Vista/Home/Sesiones/Reportegastos.dart';
 
 class HomeScreen extends StatefulWidget {
   final String userId;
@@ -204,18 +201,10 @@ class _HomeScreenState extends State<HomeScreen> {
           mainAxisSpacing: 16.0,
           children: [
             buildIconButton(Icons.person_add, 'Crear Cliente', CrearCliente()),
-            buildIconButton(
-                Icons.free_cancellation_sharp,
-                'Pruebas',
-                ListaPrestamosScreen(
-                  userId: widget.userId,
-                )),
+            buildIconButton(Icons.free_cancellation_sharp, 'Lista de Prestamos',
+                ListaPrestamosScreen()),
             buildIconButton(Icons.monetization_on, 'Crear Préstamo',
                 CrearPrestamosScreen()),
-            buildIconButton(Icons.list_alt_rounded, 'Lista de Préstamos',
-                PruebasPrestamosPage(userId: widget.userId)),
-            buildIconButton(
-                Icons.money_sharp, 'Contabilidad', ContabilidadDelDia()),
             buildIconButtonWithUserId(
                 Icons.report_problem_outlined,
                 'Reporte de Gastos',

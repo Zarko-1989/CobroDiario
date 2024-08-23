@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:pagosdiarios/src/Vista/login_screen.dart';
+import 'package:pagosdiarios/src/Vista/Login/login_screen.dart';
 import 'firebase_options.dart';
 
 Future<void> main() async {

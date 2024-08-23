@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 class ReporteGastosPage extends StatefulWidget {
   final String userId;
   ReporteGastosPage({required this.userId});
+
   @override
   _ReporteGastosPageState createState() => _ReporteGastosPageState();
 }
@@ -81,6 +82,7 @@ class _ReporteGastosPageState extends State<ReporteGastosPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Reporte de Gastos'),
+        backgroundColor: Colors.blueAccent,
       ),
       body: Padding(
         padding: EdgeInsets.all(16.0),
@@ -93,11 +95,42 @@ class _ReporteGastosPageState extends State<ReporteGastosPage> {
               return Form(
                 key: _formKey,
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.blueAccent.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black26,
+                            blurRadius: 4,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      padding: EdgeInsets.all(16),
+                      child: Text(
+                        'Registro de Gastos',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blueAccent,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    SizedBox(height: 20),
                     TextFormField(
                       controller: _conceptoController,
-                      decoration:
-                          InputDecoration(labelText: 'Concepto del Gasto'),
+                      decoration: InputDecoration(
+                        labelText: 'Concepto del Gasto',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        prefixIcon:
+                            Icon(Icons.description, color: Colors.blueAccent),
+                      ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Por favor ingrese un concepto';
@@ -105,9 +138,17 @@ class _ReporteGastosPageState extends State<ReporteGastosPage> {
                         return null;
                       },
                     ),
+                    SizedBox(height: 16),
                     TextFormField(
                       controller: _valorController,
-                      decoration: InputDecoration(labelText: 'Valor del Gasto'),
+                      decoration: InputDecoration(
+                        labelText: 'Valor del Gasto',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        prefixIcon:
+                            Icon(Icons.money_off, color: Colors.blueAccent),
+                      ),
                       keyboardType: TextInputType.number,
                       validator: (value) {
                         if (value == null || value.isEmpty) {
@@ -121,18 +162,35 @@ class _ReporteGastosPageState extends State<ReporteGastosPage> {
                     ),
                     SizedBox(height: 20),
                     Text(
-                        'Fecha: ${DateFormat('dd/MM/yyyy').format(DateTime.now())}'),
+                      'Fecha: ${DateFormat('dd/MM/yyyy').format(DateTime.now())}',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.blueAccent,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     SizedBox(height: 20),
                     ElevatedButton(
                       onPressed: () => _submitForm(snapshot.data!),
                       child: Text('Registrar Gasto'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blueAccent,
+                        padding: EdgeInsets.symmetric(vertical: 16.0),
+                        textStyle: TextStyle(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ],
                 ),
               );
             } else {
               return Center(
-                  child: Text('Error al cargar el nombre de usuario'));
+                child: Text(
+                  'Error al cargar el nombre de usuario',
+                  style: TextStyle(color: Colors.red, fontSize: 16),
+                ),
+              );
             }
           },
         ),
